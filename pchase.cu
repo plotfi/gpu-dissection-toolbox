@@ -9,6 +9,8 @@
 /// Microbenchmarking: https://arxiv.org/abs/1804.06826 Dissecting GPU Memory
 /// Hierarchy through Microbenchmarking: https://arxiv.org/abs/1509.02308
 /// Capturing the Memory Topology of GPUs: https://hgpu.org/?p=27501
+
+/// From 1804.06826 Citadel Paper (https://arxiv.org/abs/1804.06826)
 __global__ void l1_bw(uint32_t *startClk, uint32_t *stopClk, double *dsink,
                       uint64_t *posArray) { // thread index
 
