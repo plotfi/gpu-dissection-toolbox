@@ -1,10 +1,16 @@
+#include <stdint.h>
+
+#define WARP_SIZE 8
+#define L1_SIZE 32
+#define THREADS_NUM 1
+
 /// The following are a number renditions of the P-Chase algorithm from a number
 /// of publications: Dissecting the NVIDIA Volta GPU Architecture via
 /// Microbenchmarking: https://arxiv.org/abs/1804.06826 Dissecting GPU Memory
 /// Hierarchy through Microbenchmarking: https://arxiv.org/abs/1509.02308
 /// Capturing the Memory Topology of GPUs: https://hgpu.org/?p=27501
 __global__ void l1_bw(uint32_t *startClk, uint32_t *stopClk, double *dsink,
-                      uint32_t *posArray) { // thread index
+                      uint64_t *posArray) { // thread index
 
 
   uint32_t tid = threadIdx.x;
@@ -12,13 +18,14 @@ __global__ void l1_bw(uint32_t *startClk, uint32_t *stopClk, double *dsink,
   double sink = 0;
 
   // populate l1 cache to warm up
+  #pragma unroll 1
   for (uint32_t i = tid; i < L1_SIZE; i += THREADS_NUM) {
-    double *ptr = posArray + i;
-    asm volatile("{\t\n"
-                 ".reg .f32 data;\n\t"
-                 "ld.global.ca.f64 data, [%1];\n\t"
+    double *ptr = (double*)(posArray + i);
+    asm volatile("{\n\t\t"
+                 ".reg .f64 data;\n\t\t"
+                 "ld.global.ca.f64 data, [%1];\n\t\t"
                  "add.f64 %0, data, %0;\n\t"
-                 "}"
+                 "}\n"
                  : "+d"(sink)
                  : "l"(ptr)
                  : "memory");
@@ -32,15 +39,16 @@ __global__ void l1_bw(uint32_t *startClk, uint32_t *stopClk, double *dsink,
   asm volatile("mov.u32 %0, %%clock;" : "=r"(start)::"memory");
 
   // load data from l1 cache and accumulate
+  #pragma unroll 1
   for (uint32_t i = 0; i < L1_SIZE; i += THREADS_NUM) {
-    double *ptr = posArray + i; // every warp loads all data in l1 cache
+    double *ptr = (double*)(posArray + i); // every warp loads all data in l1 cache
     for (uint32_t j = 0; j < THREADS_NUM; j += WARP_SIZE) {
       uint32_t offset = (tid + j) % THREADS_NUM;
-      asm volatile("{\t\n"
-                   ".reg .f64 data;\n\t"
-                   "ld.global.ca.f64 data, [%1];\n\t"
+      asm volatile("{\n\t\t"
+                   ".reg .f64 data;\n\t\t"
+                   "ld.global.ca.f64 data, [%1];\n\t\t"
                    "add.f64 %0, data, %0;\n\t"
-                   "}"
+                   "}\n"
                    : "+d"(sink)
                    : "l"(ptr + offset)
                    : "memory");
