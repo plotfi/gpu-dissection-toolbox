@@ -21,7 +21,7 @@
 ///
 /// start_time = clock();
 /// for (unsigned k = 0; k < m; k++) {
-///   j = A[j];
+///   k = A[k];
 /// }
 /// end_time = clock();
 /// tvalue = (end_time - start_time) / iterations;
