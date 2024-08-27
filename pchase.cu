@@ -16,6 +16,7 @@ __global__ void l1_bw(uint32_t *startClk, uint32_t *stopClk, double *dsink,
 
 
   uint32_t tid = threadIdx.x;
+
   // a register to avoid compiler optimization
   double sink = 0;
 
@@ -32,7 +33,6 @@ __global__ void l1_bw(uint32_t *startClk, uint32_t *stopClk, double *dsink,
                  : "l"(ptr)
                  : "memory");
   }
-
   // synchronize all threads
   asm volatile("bar.sync 0;");
 
@@ -60,13 +60,13 @@ __global__ void l1_bw(uint32_t *startClk, uint32_t *stopClk, double *dsink,
                    : "memory");
     }
   }
-
-
   // synchronize all threads
   asm volatile("bar.sync 0;");
+
   // stop timing
   uint32_t stop = 0;
   asm volatile("mov.u32 %0, %%clock;" : "=r"(stop)::"memory");
+
   // write time and data back to memory
   startClk[tid] = start;
   stopClk[tid] = stop;
