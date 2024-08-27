@@ -1,33 +1,21 @@
-/*
+/// This pchase implementation is from:
+/// DELTA: Validate GPU Memory Profiling with Microbenchmarks
+/// https://xianweiz.github.io/doc/papers/delta_memsys20.pdf
+/// This is the AMD HIP Pointer Chasing paper
 
-   This code comes from the Zhang AMD paper:
+#include <cuda_runtime.h>
+#include <cstdint>
 
-   https://xianweiz.github.io/doc/papers/delta_memsys20.pdf
+__global__ void hip_pchase(unsigned *array,
+                           unsigned array_length,
+                           uint64_t *duration) {
+  uint32_t tid = threadIdx.x;
+  unsigned j = 0;
 
-*/
-
-#include <stdint.h>
-
-using _TYPE = unsigned;
-
-uint64_t clock() {
-  return 0;
-}
-
-/* kernel: serially reading array elements */
-
-__global__ void pchase_RO(_TYPE *array, unsigned array_length, unsigned m,
-                          uint64_t *duration) {
-
-  _TYPE j = 0;
-
-  // GET THE RIGHT TID:
-  unsigned tid = 0;
-
-  unsigned k;
   uint64_t time = clock();
 
-  for (k = 0; k < m; k++) {
+  #pragma unroll 1
+  for (unsigned k = 0; k < array_length; k++) {
     j = array[j];
   }
 
@@ -35,19 +23,20 @@ __global__ void pchase_RO(_TYPE *array, unsigned array_length, unsigned m,
   duration[tid] = clock() - time;
 }
 
+#if 0
 // Setup Host Code
 auto main() -> int {
 
   unsigned N = 32;
   unsigned stride = 8;
-  _TYPE array[1024];
+  unsigned array[1024];
 
   /* setup: initialize array on CPU with the stride */
   for (unsigned i = 0; i < N; i++) {
-    array[i] = static_cast<_TYPE>((i + stride) % N);
+    array[i] = static_cast<unsigned>((i + stride) % N);
   }
 
   /* copy array to GPU, launch kernel (not shown) */
 }
-
+#endif
 

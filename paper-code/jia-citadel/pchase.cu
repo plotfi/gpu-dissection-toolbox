@@ -43,7 +43,11 @@ __global__ void l1_bw(uint32_t *startClk, uint32_t *stopClk, double *dsink,
   // load data from l1 cache and accumulate
   #pragma unroll 1
   for (uint32_t i = 0; i < L1_SIZE; i += THREADS_NUM) {
-    double *ptr = (double*)(posArray + i); // every warp loads all data in l1 cache
+
+    double *ptr = (double*)(posArray + i);
+
+    // every warp loads all data in l1 cache
+
     for (uint32_t j = 0; j < THREADS_NUM; j += WARP_SIZE) {
       uint32_t offset = (tid + j) % THREADS_NUM;
       asm volatile("{\n\t\t"

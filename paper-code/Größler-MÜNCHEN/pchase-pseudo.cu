@@ -1,27 +1,50 @@
-/*
+/// This pchase implementation is from:
+/// Capturing the Memory Topology of GPUs
+/// https://mediatum.ub.tum.de/doc/1689994/1689994.pdf
+/// I call this the German Inline PTX Fine P-Chase
 
-  This pchase work is from:
+/// Based on the classic P-Chase:
+///
+/// start_time = clock();
+/// for (unsigned k = 0; k < m; k++) {
+///   j = A[j];
+/// }
+/// end_time = clock();
+/// tvalue = (end_time - start_time) / iterations;
+///
 
-  Capturing the Memory Topology of GPUs
+#include <cuda_runtime.h>
+#include <cstdint>
 
-  https://mediatum.ub.tum.de/doc/1689994/1689994.pdf
+#define measureSize 32
 
-*/
+__global__ void pchase(unsigned *array,
+                       unsigned array_length,
+                       uint64_t *duration) {
+  __shared__ long long s_tvalue[measureSize];
+  __shared__ unsigned int s_index[measureSize];
 
-__global__ void anotherKernel() {
+  asm volatile(".reg .u64 smem_ptr64;\n\t"
+               "cvta.to.shared.u64 smem_ptr64, %0;\n\t"
+               :: "l"(s_index));
 
+  uint32_t tid = threadIdx.x;
+  unsigned *ptr = nullptr;
+  unsigned j = 0;
 
-  unsigned int* ptr; unsigned int j = 0;
-
+  // preheat the data
   for (int k = 0; k < array_length; k++) {
-    ptr = my_array + j;
-
+    ptr = array + j;
     asm volatile("ld.global.ca.u32 %0, [%1];"
                  : "=r"(j) : "l"(ptr) : "memory");
   }
 
-  for (int k = 0; k < measureSize; k++) {
-    ptr = my_array + j;
+  #pragma unroll 1
+  for (unsigned k = 0; k < array_length; k++) {
+    unsigned start_time = 0;
+    unsigned end_time = 0;
+
+    ptr = array + j;
     asm volatile ("mov.u32 %0, %%clock;\n\t"
         "ld.global.ca.u32 %1, [%3];\n\t"
         "st.shared.u32 [smem_ptr64], %1;"
@@ -29,7 +52,22 @@ __global__ void anotherKernel() {
         "add.u64 smem_ptr64, smem_ptr64, 4;"
         : "=r"(start_time), "=r"(j), "=r"(end_time)
         : "l"(ptr) : "memory");
-    s_tvalue[k] = end_time-start_time;
+
+    // store the access latency
+    s_tvalue[k] = end_time - start_time;
   }
+
+  unsigned time_sum = 0;
+  for (int k = 0; k < array_length; k++) {
+    time_sum += s_tvalue[k];
+  }
+  duration[tid] = time_sum;
 }
+
+#if 0
+// INIT
+for (i=0; i < array_size; i++) {
+  A[i] = (i + stride) % array_size;
+}
+#endif
 
