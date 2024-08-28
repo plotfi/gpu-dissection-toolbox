@@ -3,6 +3,8 @@
 #include <vector>
 #include <cstdint>
 
+#include "error-macro.h"
+
 auto vector_add_host(int argc, char **argv) -> int {
 
   if (argc != 3) {

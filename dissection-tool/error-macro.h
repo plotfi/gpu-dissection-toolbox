@@ -3,6 +3,9 @@
 #include <iostream>
 #include <cstdio>
 
+#ifndef __ERROR_MACRO__
+#define __ERROR_MACRO__
+
 #define CUDA_CHECK(_err, msg)                                                  \
   do {                                                                         \
     cudaError_t __err = (_err);                                                \
@@ -14,4 +17,6 @@
       exit(EXIT_FAILURE);                                                      \
     }                                                                          \
   } while (false)
+
+#endif
 
